@@ -65,10 +65,10 @@ test('un usuario activo puede leer su propio departamento', async () => {
   await assertSucceeds(getDoc(doc(context('operator-a'), ...path('org-a', 'departments', 'quality'))));
 });
 
-test('solo dirección/administración puede crear departamentos', async () => {
+test('los departamentos se crean solo desde el backend autorizado', async () => {
   const payload = { name: 'Producción', description: '', active: true, createdAt: 'now', updatedAt: 'now' };
   await assertFails(setDoc(doc(context('operator-a'), ...path('org-a', 'departments', 'production')), payload));
-  await assertSucceeds(setDoc(doc(context('owner-a'), ...path('org-a', 'departments', 'production')), payload));
+  await assertFails(setDoc(doc(context('owner-a'), ...path('org-a', 'departments', 'production')), payload));
 });
 
 test('el operador puede crear un borrador propio', async () => {
@@ -131,4 +131,24 @@ test('solo roles autorizados pueden registrar hallazgos de auditoría', async ()
 
 test('el acceso a rutas desconocidas permanece bloqueado', async () => {
   await assertFails(setDoc(doc(context('owner-a'), 'global-secrets', 'unsafe'), { value: 1 }));
+});
+
+test('el usuario consulta únicamente su índice de organizaciones', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'users', 'operator-a', 'orgMemberships', 'org-a'), {
+      role: 'operator', active: true,
+    });
+  });
+  await assertSucceeds(getDoc(doc(context('operator-a'), 'users', 'operator-a', 'orgMemberships', 'org-a')));
+  await assertFails(getDoc(doc(context('owner-b'), 'users', 'operator-a', 'orgMemberships', 'org-a')));
+  await assertFails(setDoc(doc(context('operator-a'), 'users', 'operator-a', 'orgMemberships', 'org-b'), {
+    role: 'owner', active: true,
+  }));
+});
+
+test('las invitaciones solo pueden ser consultadas y modificadas por funciones de servidor', async () => {
+  await assertFails(setDoc(doc(context('owner-a'), ...path('org-a', 'invitations', 'unsafe')), {
+    email: 'a@example.org', role: 'owner', tokenHash: 'unsafe',
+  }));
+  await assertFails(getDoc(doc(context('owner-a'), ...path('org-a', 'invitations', 'unsafe'))));
 });
