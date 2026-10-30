@@ -1,0 +1,127 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // IMPORTANT: Organization creation and role assignments are server-only.
+    // Firebase Admin SDK bypasses these client rules; secure the backend with IAM.
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function membershipPath(orgId) {
+      return /databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid);
+    }
+
+    function hasRole(orgId, roles) {
+      return signedIn()
+        && exists(membershipPath(orgId))
+        && get(membershipPath(orgId)).data.active == true
+        && get(membershipPath(orgId)).data.role in roles;
+    }
+
+    function member(orgId) {
+      return hasRole(orgId, ['owner', 'admin', 'auditor', 'lead', 'operator', 'viewer']);
+    }
+
+    function manager(orgId) {
+      return hasRole(orgId, ['owner', 'admin']);
+    }
+
+    function editor(orgId) {
+      return hasRole(orgId, ['owner', 'admin', 'auditor', 'lead']);
+    }
+
+    function dataEntry(orgId) {
+      return hasRole(orgId, ['owner', 'admin', 'auditor', 'lead', 'operator']);
+    }
+
+    match /organizations/{orgId} {
+      allow read: if member(orgId);
+      allow create, update, delete: if false;
+
+      match /members/{uid} {
+        allow get: if manager(orgId) || (signedIn() && request.auth.uid == uid && member(orgId));
+        allow list: if manager(orgId);
+        allow create, update, delete: if false;
+      }
+
+      match /departments/{departmentId} {
+        allow read: if member(orgId);
+        allow create: if manager(orgId)
+          && request.resource.data.keys().hasOnly(['name', 'description', 'active', 'createdAt', 'updatedAt'])
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.name.size() <= 120
+          && request.resource.data.active is bool;
+        allow update: if manager(orgId)
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['name', 'description', 'active', 'updatedAt']);
+        allow delete: if false;
+      }
+
+      match /processes/{processId} {
+        allow read: if member(orgId);
+        allow create, update: if editor(orgId);
+        allow delete: if false;
+      }
+
+      match /formTemplates/{templateId} {
+        allow read: if member(orgId);
+        allow create, update: if editor(orgId);
+        allow delete: if false;
+      }
+
+      match /records/{recordId} {
+        allow read: if member(orgId);
+        allow create: if dataEntry(orgId)
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.status == 'draft'
+          && request.resource.data.departmentId is string
+          && request.resource.data.templateId is string
+          && request.resource.data.values is map;
+        allow update: if dataEntry(orgId)
+          && resource.data.status == 'draft'
+          && (resource.data.createdBy == request.auth.uid || editor(orgId))
+          && request.resource.data.createdBy == resource.data.createdBy
+          && request.resource.data.status in ['draft', 'submitted'];
+        allow delete: if false;
+      }
+
+      match /audits/{auditId} {
+        allow read: if member(orgId);
+        allow create, update: if hasRole(orgId, ['owner', 'admin', 'auditor']);
+        allow delete: if false;
+      }
+
+      match /findings/{findingId} {
+        allow read: if member(orgId);
+        allow create, update: if hasRole(orgId, ['owner', 'admin', 'auditor']);
+        allow delete: if false;
+      }
+
+      match /correctiveActions/{actionId} {
+        allow read: if member(orgId);
+        allow create, update: if editor(orgId);
+        allow delete: if false;
+      }
+
+      match /documents/{documentId} {
+        allow read: if member(orgId);
+        allow create, update: if editor(orgId);
+        allow delete: if false;
+      }
+
+      match /auditLog/{eventId} {
+        allow read: if manager(orgId);
+        allow write: if false; // Immutable events created by trusted backend.
+      }
+
+      match /{other=**} {
+        allow read, write: if false;
+      }
+    }
+
+    match /{other=**} {
+      allow read, write: if false;
+    }
+  }
+}
