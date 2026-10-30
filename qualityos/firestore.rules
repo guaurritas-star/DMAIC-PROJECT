@@ -46,16 +46,13 @@ service cloud.firestore {
 
       match /departments/{departmentId} {
         allow read: if member(orgId);
-        allow create: if manager(orgId)
-          && request.resource.data.keys().hasOnly(['name', 'description', 'active', 'createdAt', 'updatedAt'])
-          && request.resource.data.name is string
-          && request.resource.data.name.size() > 0
-          && request.resource.data.name.size() <= 120
-          && request.resource.data.active is bool;
-        allow update: if manager(orgId)
-          && request.resource.data.diff(resource.data).affectedKeys()
-              .hasOnly(['name', 'description', 'active', 'updatedAt']);
-        allow delete: if false;
+        // Department changes go through authenticated callable functions.
+        allow write: if false;
+      }
+
+      match /invitations/{inviteId} {
+        // Invite email and token hashes must never be exposed to the browser.
+        allow read, write: if false;
       }
 
       match /processes/{processId} {
@@ -121,6 +118,11 @@ service cloud.firestore {
       match /{other=**} {
         allow read, write: if false;
       }
+    }
+
+    match /users/{uid}/orgMemberships/{orgId} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
     }
 
     match /{other=**} {
