@@ -82,6 +82,9 @@ service cloud.firestore {
           && resource.data.status == 'draft'
           && (resource.data.createdBy == request.auth.uid || editor(orgId))
           && request.resource.data.createdBy == resource.data.createdBy
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['values', 'status', 'updatedAt'])
+          && request.resource.data.values is map
           && request.resource.data.status in ['draft', 'submitted'];
         allow delete: if false;
       }
