@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test:rules": "node --test tests/firestore.rules.test.mjs"
+    "test:rules": "node --test tests/firestore.rules.test.mjs",
+    "seed:demo": "node scripts/seed-demo.mjs"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^6.0.0",
