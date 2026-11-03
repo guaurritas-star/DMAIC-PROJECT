@@ -9,7 +9,13 @@ import {
 initializeApp();
 const db = getFirestore();
 const REGION = 'us-south1'; // Closest currently documented Firebase Functions region to MX Firestore.
-const OPTIONS = { region: REGION, enforceAppCheck: true, maxInstances: 5, timeoutSeconds: 30 };
+// Keep App Check enforced in production. Local emulators do not have a real App Check token.
+const OPTIONS = {
+  region: REGION,
+  enforceAppCheck: process.env.FUNCTIONS_EMULATOR !== 'true',
+  maxInstances: 5,
+  timeoutSeconds: 30,
+};
 const TS = () => FieldValue.serverTimestamp();
 const orgRef = (orgId) => db.doc('organizations/' + id(orgId, 'Organización'));
 const memberRef = (orgId, uid) => orgRef(orgId).collection('members').doc(uid);
