@@ -8,7 +8,8 @@
   },
   "scripts": {
     "check": "node --check index.js && node --check domain.js",
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test test/*.test.mjs",
+    "test:integration": "node --test test/integration.emulators.test.mjs"
   },
   "dependencies": {
     "firebase-admin": "^13.5.0",
