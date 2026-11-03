@@ -92,30 +92,30 @@ Not production-ready: Firebase project exists but this branch is **not deployed*
 
 ## Phase 2: Companies / users / departments (development)
 
-The following callable Cloud Functions were added in \`functions/index.js\`:
+The following callable Cloud Functions were added in `functions/index.js`:
 
 | Callable | Permission | Outcome |
 |---|---|---|
-| \`createOrganization\` | Google/Firebase signed-in user with verified email; one self-created organization per account | Creates company, verified owner membership, personal org index and audit event in one transaction |
-| \`listMyOrganizations\` | Signed-in, verified email | Returns only active organizations belonging to the caller |
-| \`createDepartment\` | owner/admin | Creates department and audit event |
-| \`updateDepartment\` | owner/admin | Updates name/description or archives department (\`active=false\`) |
-| \`createInvitation\` | owner/admin; only owner can invite admin | Issues one-use 7-day invitation for a specific email and role |
-| \`acceptInvitation\` | Signed-in, verified email matching invitation | Atomically redeems invitation, creates membership and personal org index |
-| \`updateMemberAccess\` | owner only | Changes another non-owner collaborator's role or activates/deactivates them |
+| `createOrganization` | Google/Firebase signed-in user with verified email; one self-created organization per account | Creates company, verified owner membership, personal org index and audit event in one transaction |
+| `listMyOrganizations` | Signed-in, verified email | Returns only active organizations belonging to the caller |
+| `createDepartment` | owner/admin | Creates department and audit event |
+| `updateDepartment` | owner/admin | Updates name/description or archives department (`active=false`) |
+| `createInvitation` | owner/admin; only owner can invite admin | Issues one-use 7-day invitation for a specific email and role |
+| `acceptInvitation` | Signed-in, verified email matching invitation | Atomically redeems invitation, creates membership and personal org index |
+| `updateMemberAccess` | owner only | Changes another non-owner collaborator's role or activates/deactivates them |
 
-Roles: \`owner\`, \`admin\`, \`auditor\`, \`lead\`, \`operator\`, \`viewer\`. The frontend must not be able to create companies, invites, membership records or departments without going through the trusted Cloud Functions. Company administrator may invite employees, and the generated invitation code must be delivered via a trusted channel; automatic email delivery is **not** implemented.
+Roles: `owner`, `admin`, `auditor`, `lead`, `operator`, `viewer`. The frontend must not be able to create companies, invites, membership records or departments without going through the trusted Cloud Functions. Company administrator may invite employees, and the generated invitation code must be delivered via a trusted channel; automatic email delivery is **not** implemented.
 
 The permission test suite now protects the internal membership index and prevents browser access to invitations and department writes. **Security unit tests do not by themselves prove every Cloud Function flow is correct.** We included an additional emulator integration scenario for organizational onboarding and invitations.
 
 ### Local test commands (Windows PowerShell)
 
-You previously cloned the \`feat/qualityos-backend-foundation\` branch into:
-\`C:\Users\luisi\QualityOS-dev\qualityos\`.
+You previously cloned the `feat/qualityos-backend-foundation` branch into:
+`C:\Users\luisi\QualityOS-dev\qualityos`.
 
 1. Pull latest changes and install dependencies:
 
-\`\`\`powershell
+```powershell
 cd "$HOME\QualityOS-dev\qualityos"
 git pull
 npm.cmd install
@@ -123,32 +123,32 @@ cd .\functions
 npm.cmd install
 npm.cmd test
 cd ..
-\`\`\`
+```
 
-2. Stop the **previous** emulator (Ctrl+C in its window), then start all three services from the \`qualityos\` directory:
+2. Stop the **previous** emulator (Ctrl+C in its window), then start all three services from the `qualityos` directory:
 
-\`\`\`powershell
+```powershell
 firebase.cmd emulators:start --only auth,firestore,functions --project demo-qualityos
-\`\`\`
+```
 
 3. In a **second** PowerShell window run, one at a time:
 
-\`\`\`powershell
+```powershell
 cd "$HOME\QualityOS-dev\qualityos"
 npm.cmd run test:rules
 cd .\functions
 npm.cmd run test:integration
-\`\`\`
+```
 
-\`test:rules\` clears the **local Firestore emulator** between cases. This can remove your previous demonstration records; reload them afterward with \`npm.cmd run seed:demo\` from the \`qualityos\` directory. All tests and seeds explicitly target \`demo-qualityos\`, never \`qualityos-d03dd\`.
+`test:rules` clears the **local Firestore emulator** between cases. This can remove your previous demonstration records; reload them afterward with `npm.cmd run seed:demo` from the `qualityos` directory. All tests and seeds explicitly target `demo-qualityos`, never `qualityos-d03dd`.
 
 **Node 22 runtime** is configured for deployed functions. Check your local Node installation because your previous PowerShell output showed Node 20. A local mismatch may produce warnings or emulator incompatibility. Node 22 is preferred for function development; do not change the production runtime to an older decommissioned Node version.
 
 ### Costs and production gates
 
-- The real Firebase project \`qualityos-d03dd\` is currently on **Spark**. Deploying Cloud Functions **requires Blaze with billing enabled**. Do not upgrade the plan or deploy without understanding the cost exposure.
-- App Check is enforced for callables in production and bypassed only when the Firebase emulator sets \`FUNCTIONS_EMULATOR=true\`; configure App Check for the real web app before production requests.
+- The real Firebase project `qualityos-d03dd` is currently on **Spark**. Deploying Cloud Functions **requires Blaze with billing enabled**. Do not upgrade the plan or deploy without understanding the cost exposure.
+- App Check is enforced for callables in production and bypassed only when the Firebase emulator sets `FUNCTIONS_EMULATOR=true`; configure App Check for the real web app before production requests.
 - Protect the domain and control permitted login methods. Use a full role/tenant review, audit event retention strategy, query/index validation, backups and end-to-end tests before enabling real client data.
 - Firestore's real database remains in its previously locked-down state until **reviewed** rules are explicitly deployed.
-- The \`client/qualityos-api.js\` adapter is a contract for Google AI Studio, **not** a working UI. A browser-based preview hosted remotely cannot access your local \`127.0.0.1\` emulators.
+- The `client/qualityos-api.js` adapter is a contract for Google AI Studio, **not** a working UI. A browser-based preview hosted remotely cannot access your local `127.0.0.1` emulators.
 - Nothing under this branch should be merged or deployed automatically.
