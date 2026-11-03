@@ -43,5 +43,16 @@ export function createQualityOSClient(app, { localEmulators = false } = {}) {
         (snapshot) => onData(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))),
         onError
       ),
+    watchMembers: (organizationId, onData, onError) =>
+      onSnapshot(
+        collection(db, 'organizations', organizationId, 'members'),
+        (snapshot) => onData(snapshot.docs.map((doc) => ({
+          uid: doc.id,
+          email: doc.data().email || '',
+          role: doc.data().role,
+          active: doc.data().active === true,
+        }))),
+        onError
+      ),
   };
 }
